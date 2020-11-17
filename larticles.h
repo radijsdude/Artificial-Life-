@@ -5,14 +5,11 @@
 #endif
 typedef struct
 {
-	Larticle larticles[LARTICLES_MAX];
-	int larticles_amount;
+	std::vector<Larticle> larticles;
 }Larticles;
 
 
 void Larticles_Initiate(Larticles *larticles);
 void Larticles_Doe(Larticles *larticles);
 
-void Larticles_Add(Larticles *larticles, Larticle larticle);
-void Larticles_Remove(Larticles *larticles, int i);
 #endif

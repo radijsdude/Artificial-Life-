@@ -7,7 +7,7 @@ void Larticles_Blits(SDL_Renderer *renderer, Larticles *larticles, float scale, 
 
 void Larticles_Blits(SDL_Renderer *renderer, Larticles *larticles, float scale, float x, float y)
 {
-	for (int i=0; i<larticles->larticles_amount +1; i++)
+	for (int i=0; i<larticles->larticles.size(); i++)
 	{
 		Draw_circle(renderer, (int)((larticles->larticles[i].x+x) * scale),(int)((larticles->larticles[i].y+y) * scale),
 		(int)((larticles->larticles[i].r +1) * scale), (int)(larticles->larticles[i].color[0]),
@@ -17,16 +17,26 @@ void Larticles_Blits(SDL_Renderer *renderer, Larticles *larticles, float scale, 
 		SDL_SetRenderDrawColor(renderer,0,0,0,255);
 		SDL_RenderDrawLine(renderer, (int)((larticles->larticles[i].x+x) * scale), (int)((larticles->larticles[i].y+y) * scale),
 		(int)(((larticles->larticles[i].x+x) + larticles->larticles[i].r * cos(larticles->larticles[i].angle)) * scale),
-		(int)(((larticles->larticles[i].y+y) + larticles->larticles[i].r * sin(larticles->larticles[i].angle)) * scale)
-		);
+		(int)(((larticles->larticles[i].y+y) + larticles->larticles[i].r * sin(larticles->larticles[i].angle)) * scale));
+		if(larticles->larticles[i].potentials[NEURON_EAT]>0.5f)
+        {
+            SDL_RenderDrawLine(renderer, (int)((larticles->larticles[i].x+x) * scale), (int)((larticles->larticles[i].y+y) * scale),
+            (int)(((larticles->larticles[i].x+x) + larticles->larticles[i].r * cos(larticles->larticles[i].angle + M_PI / 6.0f)) * scale),
+            (int)(((larticles->larticles[i].y+y) + larticles->larticles[i].r * sin(larticles->larticles[i].angle + M_PI / 6.0f)) * scale));
+
+            SDL_RenderDrawLine(renderer, (int)((larticles->larticles[i].x+x) * scale), (int)((larticles->larticles[i].y+y) * scale),
+            (int)(((larticles->larticles[i].x+x) + larticles->larticles[i].r * cos(larticles->larticles[i].angle - M_PI / 6.0f)) * scale),
+            (int)(((larticles->larticles[i].y+y) + larticles->larticles[i].r * sin(larticles->larticles[i].angle - M_PI / 6.0f)) * scale));
+        }
+
 	}
 }
 
 int main( int argc, char* args[] )
 {
 
-	clock_t rstart, rstop;
-	rstart = clock();
+	//clock_t rstart, rstop;
+	//rstart = clock();
 
 	SDL_Window *window;
 	SDL_Renderer *renderer;
@@ -36,10 +46,21 @@ int main( int argc, char* args[] )
 	window = SDL_CreateWindow("Arys",0,0,SCREEN_X,SCREEN_Y,0);
 	renderer = SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);
 
-	rstop = clock();
-	int rtime = rstop - rstart;
-	int seed = time(NULL);
-	srand(seed);
+    int myseed = 1605560059;
+    int seeded = 0;
+    int seed = -13;
+	//rstop = clock();
+	//int rtime = rstop - rstart;
+	if(seeded==0)
+    {
+        seed = time(NULL);
+    }
+    else
+    {
+        seed = myseed;
+    }
+    srand(seed);
+    printf("Random seed:%d\n",seed);
 	int delay = 0;
 	int fullscreen = 0;
 
@@ -47,20 +68,22 @@ int main( int argc, char* args[] )
 
 	Larticles_Initiate(&larticles);
 
-	float scale = ((float)SCREEN_Y-50.0f)/((float)UNIVERSE_SIZE);
-	float beginscale = ((float)SCREEN_Y-50.0f)/((float)UNIVERSE_SIZE);
-	float x = 50.0f;//(float)UNIVERSE_SIZE/2.0f - SCREEN_X/2);
-	float y = 50.0f;
+	float scale = ((float)SCREEN_Y)/((float)UNIVERSE_SIZE*1.1f);
+	float beginscale = scale;
+	float beginx = 100.0f;
+	float beginy = 100.0f;
+	float x = beginx;//(float)UNIVERSE_SIZE/2.0f - SCREEN_X/2);
+	float y = beginy;
 	float dt = 1000.0f;
 
 	int running = 1;
-	int doe = 0;
+	int doe = 1;
     Larticles_Doe(&larticles);
 
 	while(running==1)
 	{
-		clock_t start, stop;
-		start = clock();
+		//clock_t start, stop;
+		//start = clock();
 
 
 		SDL_Event event;
@@ -110,8 +133,8 @@ int main( int argc, char* args[] )
 							y -= 20.0f;
 							break;
 						case SDLK_r:
-							x = ((float)UNIVERSE_SIZE/2.0f - SCREEN_X/2);
-							y = 0.0f;
+							x = beginx;
+							y = beginy;
 							scale = beginscale;
 							break;
 						case SDLK_i:
@@ -143,8 +166,10 @@ int main( int argc, char* args[] )
 						}
 						case SDLK_x:
 							Larticles_Doe(&larticles);
+							break;
 						case SDLK_y:
 							Larticles_Initiate(&larticles);
+							break;
 
 					}
 
@@ -163,12 +188,13 @@ int main( int argc, char* args[] )
 		Larticles_Blits(renderer,&larticles,scale,x,y);
 		SDL_RenderPresent(renderer);
 		SDL_Delay(delay);
-		stop = clock();
-		dt = (float)(stop - start);
-   		printf("dt = %f\n amount = %d\n", dt,larticles.larticles_amount);
+		//stop = clock();
+		//dt = (float)(stop - start);
+   		//printf("dt = %f\n amount = %d\n", dt,larticles.larticles.size());
 	}
 
 
+    printf("\nRandom seed:%d\n",seed);
 
 	SDL_DestroyWindow(window);
 

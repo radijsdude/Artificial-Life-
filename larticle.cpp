@@ -105,7 +105,7 @@ void Larticle_Reset(Larticle *larticle)
     }
 }
 
-float Larticle_Calculate(Larticle *larticle, int i)
+float Larticle_Calculate_Sigmoid(Larticle *larticle, int i)
 {
     float x = 0.0f;
     int t = 0;
@@ -114,7 +114,7 @@ float Larticle_Calculate(Larticle *larticle, int i)
         if (i==larticle->connections[j][1])
         {
             t = 1;
-            x += larticle->weights[j] * Larticle_Calculate(larticle, larticle->connections[j][0]);
+            x += larticle->weights[j] * Larticle_Calculate_Sigmoid(larticle, larticle->connections[j][0]);
         }
     }
     if (t==1)
@@ -135,21 +135,63 @@ float Larticle_Calculate(Larticle *larticle, int i)
         return larticle->potentials[i];
     }
 }
+
+float Larticle_Calculate_Linear(Larticle *larticle, int i)
+{
+    float x = 0.0f;
+    int t = 0;
+    for (int j=0; j<larticle->connections_length+1; j++)
+    {
+        if (i==larticle->connections[j][1])
+        {
+            t = 1;
+            x += larticle->weights[j] * Larticle_Calculate_Linear(larticle, larticle->connections[j][0]);
+        }
+    }
+    if (t==1)
+    {
+        if( x < 0.2f && x > -0.2f)
+        {
+            x = 0.0f;
+        }
+    	if (x > 1.0f)
+    	{
+        	x = 1.0f;
+        }
+        else
+        {
+            if(x < -1.0f)
+            {
+                x = -1.0f;
+            }
+        }
+        larticle->potentials[i] = x;
+        return x;
+    }
+    else
+    {
+        return larticle->potentials[i];
+    }
+}
 void Larticle_Calculate_All(Larticle *larticle)
 {
-	Larticle_Calculate(larticle,NEURON_MOVE_X);
-	Larticle_Calculate(larticle,NEURON_MOVE_Y);
-	Larticle_Calculate(larticle,NEURON_MOVE_ANGLE);
-	Larticle_Calculate(larticle,NEURON_ATTACK);
-	Larticle_Calculate(larticle,NEURON_EAT);
-	Larticle_Calculate(larticle,NEURON_GRAVITY);
-	Larticle_Calculate(larticle,NEURON_TANGENTIAL);
-	Larticle_Calculate(larticle,NEURON_SPLIT);
-	Larticle_Calculate(larticle,NEURON_STATE_1);
-	Larticle_Calculate(larticle,NEURON_STATE_2);
-	Larticle_Calculate(larticle,NEURON_STATE_3);
-	Larticle_Calculate(larticle,NEURON_OUT_1);
-	Larticle_Calculate(larticle,NEURON_OUT_2);
+	Larticle_Calculate_Linear(larticle,NEURON_MOVE_X);
+	Larticle_Calculate_Linear(larticle,NEURON_MOVE_Y);
+	Larticle_Calculate_Linear(larticle,NEURON_MOVE_ANGLE);
+	Larticle_Calculate_Linear(larticle,NEURON_ATTACK);
+	Larticle_Calculate_Linear(larticle,NEURON_EAT);
+	//Larticle_Calculate(larticle,NEURON_GRAVITY);
+	//Larticle_Calculate(larticle,NEURON_TANGENTIAL);
+	Larticle_Calculate_Linear(larticle,NEURON_SPLIT);
+	Larticle_Calculate_Linear(larticle,NEURON_STATE_1);
+	Larticle_Calculate_Linear(larticle,NEURON_STATE_2);
+	Larticle_Calculate_Linear(larticle,NEURON_STATE_3);
+	Larticle_Calculate_Linear(larticle,NEURON_OUT_1);
+	Larticle_Calculate_Linear(larticle,NEURON_OUT_2);
+	Larticle_Calculate_Linear(larticle,NEURON_OUT_3);
+	Larticle_Calculate_Linear(larticle,NEURON_SPEAK_1);
+	Larticle_Calculate_Linear(larticle,NEURON_SPEAK_2);
+	Larticle_Calculate_Linear(larticle,NEURON_SPEAK_3);
 }
 
 void Larticle_Correct(Larticle *larticle, int i)
@@ -166,17 +208,17 @@ void Larticle_Correct(Larticle *larticle, int i)
         }
     }
     larticle->errors[i] = 0.0f;
-    Larticle_Calculate(larticle,i);
+    Larticle_Calculate_Sigmoid(larticle,i);
 }
 
-void Larticle_Create_Connections(Larticle *larticle)
+void Larticle_Create_Connections(Larticle *larticle, int wile)
 {
 	int amount = ((int)rand()%(LARTICLE_START_CONNECTIONS));
 	for (int i=0; i<amount; i++)
 	{
 		int t = 0;
 		int test = 0;
-		while (t == 0 && test < 200)
+		while (t == 0 && (test < 200 && wile==1))
 		{
 			test += 1;
 			int tt = 1;
@@ -193,7 +235,7 @@ void Larticle_Create_Connections(Larticle *larticle)
 					tt = 0;
 				}
 			}
-			float weight = ((float)(rand()%(2*NEURONS_WEIGHT_SIZE) - NEURONS_WEIGHT_SIZE)/NEURONS_WEIGHT_SCALE);
+			float weight = ((float)(rand()%(2*NEURONS_WEIGHT_SIZE) - NEURONS_WEIGHT_SIZE)/(float)NEURONS_WEIGHT_SCALE);
 			if (tt==1)
 			{
 				t = Larticle_Add_Connection(larticle,i1,i2,weight);
@@ -205,10 +247,11 @@ void Larticle_Create_Connections(Larticle *larticle)
 
 void Larticle_Gravitate(Larticle *larticle)
 {
-	float dx = (float)(larticle->x - UNIVERSE_SIZE / 2.0f);
-	float dy = (float)(larticle->y - UNIVERSE_SIZE / 2.0f);
-	if (dx*dx + dy*dy > UNIVERSE_SIZE*UNIVERSE_SIZE/4 || 1)
+	float dx = (float)(larticle->x - (float)UNIVERSE_SIZE / 2.0f);
+	float dy = (float)(larticle->y - (float)UNIVERSE_SIZE / 2.0f);
+	if (dx*dx + dy*dy > (float)(UNIVERSE_SIZE*UNIVERSE_SIZE)/4.0f)
 	{
+	    larticle->potentials[NEURON_SENSE_GRAVITY] = 1.0f;
 		if (dx == 0.0f)
 		{
 			dx = 0.1f;
@@ -221,82 +264,112 @@ void Larticle_Gravitate(Larticle *larticle)
 		float fy = (float)(-dy / ((float)UNIVERSE_FORCE) * (dx * dx + dy * dy));
 		larticle->ax = fx;
 		larticle->ay = fy;
+		//larticle->health -= 1.0f;
 	}
 	else
 	{
 		larticle->ax = 0.0f;
 		larticle->ay = 0.0f;
+		larticle->potentials[NEURON_SENSE_GRAVITY] = 0.0f;
 	}
 }
 
-void Larticle_Heridity(Larticle *larticle1, Larticle *larticle2)
+void Larticle_Heridity(Larticle *larticle1, Larticle *larticle2, int mutant)
 {
-	for (int i = 0; i < larticle1->connections_length +1; i++)
-	{
-		larticle2->connections[i][0] = larticle1->connections[i][0];
-		larticle2->connections[i][1] = larticle1->connections[i][1];
-		larticle2->weights[i] = larticle1->weights[i];
-	}
-	larticle2->connections_length = larticle1->connections_length;
-	int mr = rand() % NEURON_MUTATIONRATE;
-	for (int m = 0; m < mr; m++)
-	{
-		int r = rand() % 102;
-		if (r < 33)
-		{
-			int ri = rand()%NEURONS_AMOUNT;
-			int rj = rand()%NEURONS_AMOUNT;
-			float rweight = ((float)(rand()%(2*(int)NEURONS_WEIGHT_SIZE) - (float)NEURONS_WEIGHT_SIZE)
-			/((float)NEURONS_WEIGHT_SCALE));
-			Larticle_Add_Connection(larticle2, ri, rj, rweight);
-		}
-		else
-		{
-			if (r < 66)
-			{
-				if (larticle2->connections_length > 0)
-				{
-					int ri = rand()%larticle2->connections_length;
-					Larticle_Remove_Connection(larticle2,ri);
-				}
-			}
-			else
-			{
-				if (r < 99)
-				{
-					if (larticle2->connections_length > 0)
-					{
-						int ri = rand()%larticle2->connections_length;
-						float rweight = ((float)(rand()%(2*(int)NEURONS_WEIGHT_SIZE) -
-						(float)NEURONS_WEIGHT_SIZE)/((float)NEURONS_WEIGHT_SCALE));
-						Larticle_Change_Connection(larticle2,ri,rweight);
-					}
-				}
-				else
-				{
-					Larticle_Create_Connections(larticle1);
-				}
-			}
-		}
-	}
+    if(mutant==1)
+    {
+        for (int i = 0; i < larticle1->connections_length +1; i++)
+        {
+            larticle2->connections[i][0] = larticle1->connections[i][0];
+            larticle2->connections[i][1] = larticle1->connections[i][1];
+            larticle2->weights[i] = larticle1->weights[i];
+        }
+        larticle2->connections_length = larticle1->connections_length;
+    }
+
+    int r = rand() % 101;
+    if (r < 28)
+    {
+        int ri = rand()%NEURONS_AMOUNT;
+        int rj = rand()%NEURONS_AMOUNT;
+        float rweight = ((float)(rand()%(2*(int)NEURONS_WEIGHT_SIZE) - (float)NEURONS_WEIGHT_SIZE)
+        /((float)NEURONS_WEIGHT_SCALE));
+        Larticle_Add_Connection(larticle2, ri, rj, rweight);
+    }
+    else
+    {
+        if (r < 70)
+        {
+            if (larticle2->connections_length > 0)
+            {
+                int ri = rand()%larticle2->connections_length;
+                Larticle_Remove_Connection(larticle2,ri);
+            }
+        }
+        else
+        {
+            if (r < 99)
+            {
+                if (larticle2->connections_length > 0)
+                {
+                    int ri = rand()%larticle2->connections_length;
+                    float rweight = ((float)(rand()%(2*(int)NEURONS_WEIGHT_SIZE) -
+                    (float)NEURONS_WEIGHT_SIZE)/((float)NEURONS_WEIGHT_SCALE));
+                    Larticle_Change_Connection(larticle2,ri,rweight);
+                }
+            }
+            else
+            {
+                if(mutant==1)
+                {
+                    //Larticle_Create_Connections(larticle1,0);
+                    for (int i=0; i<NEURONS_AMOUNT; i++)
+                    {
+                        larticle2->potentials[i] = (float)NEURONS_START_POTENTIAL + ((float)(rand()) / (float)(RAND_MAX)- 0.5f) / 10.0f;
+                    }
+                    for (int i=0; i<NEURONS_CONNECTIONS; i++)
+                    {
+                        larticle2->connections[i][0] = -13.0f;
+                        larticle2->connections[i][1] = -13.0f;
+                        larticle2->weights[i] = 0.0f;
+                    }
+                    Larticle_Add_Connection(larticle2,NEURON_ALIVE_1, NEURON_EAT,1.0f);
+                    Larticle_Add_Connection(larticle2,NEURON_ALIVE_1, NEURON_SPLIT,1.0f);
+                    //Larticle_Add_Connection(larticle2,NEURON_ALIVE_1, NEURON_MOVE_X,1.0f);
+                }
+            }
+        }
+    }
 }
 
 
 void Larticle_Collide(Larticle *larticle1, Larticle *larticle2)
 {
 	float m1 = (float)(larticle1->m);
-        float m2 = (float)(larticle2->m);
-        float cosY = (float)((larticle1->x - larticle2->x) / (larticle1->r + larticle2->r));
-        float sinY = (float)((larticle1->y - larticle2->y) / (larticle1->r + larticle2->r));
-        float v1x = (float)(larticle1->vx);
-        float v1y = (float)(larticle1->vy);
-        float v2x = (float)(larticle2->vx);
-        float v2y = (float)(larticle2->vy);
-        float dc = (1.0f);
+    float m2 = (float)(larticle2->m);
+    float cosY = (float)((larticle1->x - larticle2->x) / (larticle1->r + larticle2->r));
+    float sinY = (float)((larticle1->y - larticle2->y) / (larticle1->r + larticle2->r));
+    float v1x = (float)(larticle1->vx);
+    float v1y = (float)(larticle1->vy);
+    float v2x = (float)(larticle2->vx);
+    float v2y = (float)(larticle2->vy);
+    float dc = 1.0f;
 	larticle1->vx = (float)(LARTICLE_COLISSION_MULTIPLYER*((v1x * cosY + v1y * sinY) * (m1 - m2) + 2.0f * m2 * (v2x * cosY + v2y * sinY)) * cosY / (m1 + m2) - (v1y * cosY - v1x * sinY) * sinY);
 	larticle1->vy = (float)(LARTICLE_COLISSION_MULTIPLYER*((v1x * cosY + v1y * sinY) * (m1 - m2) + 2.0f * m2 * (v2x * cosY + v2y * sinY)) * sinY / (m1 + m2) + (v1y * cosY - v1x * sinY) * cosY);
 	larticle2->vx = (float)(LARTICLE_COLISSION_MULTIPLYER*((v2x * cosY + v2y * sinY) * (m2 - m1) + 2.0f * m1 * (v1x * cosY + v1y * sinY)) * cosY / (m1 + m2) - (v2y * cosY - v2x * sinY) * sinY);
 	larticle2->vy = (float)(LARTICLE_COLISSION_MULTIPLYER*((v2x * cosY + v2y * sinY) * (m2 - m1) + 2.0f * m1 * (v1x * cosY + v1y * sinY)) * sinY / (m1 + m2) + (v2y * cosY - v2x * sinY) * cosY);
+	int tttt1 = 0;
+	int tttt2 = 0;
+	float tt1 = atan2(larticle2->y - larticle1->y,larticle2->x - larticle1->x) - larticle1->angle ;
+	float tt2 = atan2(larticle1->y - larticle2->y,larticle1->x - larticle2->x) - larticle2->angle ;
+    if(- 4 * LARTICLE_FOV < tt1&& tt1< 4 * LARTICLE_FOV)
+    {
+        tttt1 = 1;
+    }
+    if(- 4 * LARTICLE_FOV < tt2&& tt2 < 4 * LARTICLE_FOV)
+    {
+        tttt2 = 1;
+    }
 
 	if (larticle1->x >= larticle2->x)
 	{
@@ -318,7 +391,7 @@ void Larticle_Collide(Larticle *larticle1, Larticle *larticle2)
 		larticle1->y -= dc;
 		larticle2->y += dc;
 	}
-	if(larticle1->time > LARTICLE_TIME && larticle1->potentials[NEURON_EAT] > 0.5f)
+	if(larticle1->time > LARTICLE_TIME && larticle1->potentials[NEURON_EAT] > 0.0f && tttt1)
 	{
 		float dh = 1.0f;
 		if(((larticle1->state == 2) && (larticle2->state == 1))
@@ -345,11 +418,12 @@ void Larticle_Collide(Larticle *larticle1, Larticle *larticle2)
 		}
 
 	}
-	if(larticle1->time > LARTICLE_TIME && larticle1->potentials[NEURON_ATTACK] > 0.5f)
+	if(larticle1->time > LARTICLE_TIME && larticle1->potentials[NEURON_ATTACK] > 0.0f && tttt1)
 	{
-		larticle2->health -= (float)LARTICLE_ATTACK_DAMAGE;
+        larticle2->health -= (float)LARTICLE_ATTACK_DAMAGE;
 	}
-	if(larticle2->time > LARTICLE_TIME && larticle2->potentials[NEURON_EAT] > 0.5f)
+
+	if(larticle2->time > LARTICLE_TIME && larticle2->potentials[NEURON_EAT] > 0.0f && tttt2)
 	{
 		float dh = 1.0f;
 		if(((larticle2->state == 2)&&(larticle1->state == 1))
@@ -374,9 +448,9 @@ void Larticle_Collide(Larticle *larticle1, Larticle *larticle2)
 			}
 		}
 	}
-	if(larticle2->time > LARTICLE_TIME && larticle2->potentials[NEURON_ATTACK] > 0.5f)
+	if(larticle2->time > LARTICLE_TIME && larticle2->potentials[NEURON_ATTACK] > 0.0f && tttt2)
 	{
-		larticle1->health -= (float)LARTICLE_ATTACK_DAMAGE;
+        larticle1->health -= (float)LARTICLE_ATTACK_DAMAGE;
 	}
 }
 

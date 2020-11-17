@@ -40,10 +40,11 @@ int Larticle_Add_Connection(Larticle *larticle, int i, int j, float weight);
 void Larticle_Add_Error(Larticle *larticle, int i, float error);
 void Larticle_Set_Error(Larticle *larticle, int i, float error);
 void Larticle_Reset(Larticle *larticle);
-float Larticle_Calculate(Larticle *larticle, int i);
+float Larticle_Calculate_Sigmoid(Larticle *larticle, int i);
+float Larticle_Calculate_Linear(Larticle *larticle, int i);
 void Larticle_Calculate_All(Larticle *larticle);
-void Larticle_Create_Connections(Larticle *larticle);
+void Larticle_Create_Connections(Larticle *larticle, int wile);
 void Larticle_Remove_Connection(Larticle *larticle, int i);
-void Larticle_Heridity(Larticle *larticle1, Larticle *larticle2);
+void Larticle_Heridity(Larticle *larticle1, Larticle *larticle2, int mutant);
 void Larticle_Change_Connection(Larticle *larticle, int i, float weight);
 #endif
